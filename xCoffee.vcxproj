@@ -1,0 +1,125 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="xCoffee\util.h" />
+    <ClInclude Include="xCoffee\signmaker.h" />
+    <ClInclude Include="xCoffee\singleton.h" />
+    <ClInclude Include="xCoffee\plugin.h" />
+    <ClInclude Include="xCoffee\pluginmain.h" />
+    <ClInclude Include="xCoffee\pluginsdk\bridgegraph.h" />
+    <ClInclude Include="xCoffee\pluginsdk\bridgelist.h" />
+    <ClInclude Include="xCoffee\pluginsdk\bridgemain.h" />
+    <ClInclude Include="xCoffee\pluginsdk\dbghelp\dbghelp.h" />
+    <ClInclude Include="xCoffee\pluginsdk\DeviceNameResolver\DeviceNameResolver.h" />
+    <ClInclude Include="xCoffee\pluginsdk\jansson\jansson.h" />
+    <ClInclude Include="xCoffee\pluginsdk\jansson\jansson_config.h" />
+    <ClInclude Include="xCoffee\pluginsdk\jansson\jansson_x64dbg.h" />
+    <ClInclude Include="xCoffee\pluginsdk\lz4\lz4.h" />
+    <ClInclude Include="xCoffee\pluginsdk\lz4\lz4file.h" />
+    <ClInclude Include="xCoffee\pluginsdk\lz4\lz4hc.h" />
+    <ClInclude Include="xCoffee\pluginsdk\TitanEngine\TitanEngine.h" />
+    <ClInclude Include="xCoffee\pluginsdk\XEDParse\XEDParse.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_dbgfunctions.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_plugins.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_plugin_types.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_argument.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_assembler.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_bookmark.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_comment.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_debug.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_flag.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_function.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_gui.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_label.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_memory.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_misc.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_module.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_pattern.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_register.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_stack.h" />
+    <ClInclude Include="xCoffee\pluginsdk\_scriptapi_symbol.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="xCoffee\util.cpp" />
+    <ClCompile Include="xCoffee\signmaker.cpp" />
+    <ClCompile Include="xCoffee\plugin.cpp" />
+    <ClCompile Include="xCoffee\pluginmain.cpp" />
+    <ClCompile Include="xCoffee\zydis_hide.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="xCoffee.rc" />
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{561e2358-20a6-4a68-b14c-53e609ee3d7e}</ProjectGuid>
+    <RootNamespace>xCoffee</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir).build\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir).linkconf\$(ShortProjectName)\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;XCOFFEE_EXPORTS;_WINDOWS;_USRDLL;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <PrecompiledHeaderFile>
+      </PrecompiledHeaderFile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions</EnableEnhancedInstructionSet>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <CallingConvention>StdCall</CallingConvention>
+      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <DisableSpecificWarnings>4996;4273;4013;4244;4267;26450;26495</DisableSpecificWarnings>
+      <AdditionalIncludeDirectories>$(SolutionDir).depends\zydis\include;$(SolutionDir).depends\zydis\msvc;$(SolutionDir).depends\zydis\src;$(SolutionDir).depends\zydis\dependencies\zycore\include;D:\LLVM_Src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>x64bridge.lib;x64dbg.lib;XEDParse_x64.lib;TitanEngine_x64.lib;lz4_x64.lib;jansson_x64.lib;DeviceNameResolver_x64.lib;dbghelp_x64.lib;Psapi.lib;version.lib;libzydis.lib;lldMinGW.lib;LLVMDebugInfoPDB.lib;LLVMDebugInfoCodeView.lib;LLVMDebugInfoMSF.lib;LLVMDebugInfoBTF.lib;LLVMDebugInfoDWARF.lib;LLVMDebugInfoGSYM.lib;LLVMDebugInfoLogicalView.lib;LLVMObject.lib;LLVMSupport.lib;LLVMSymbolize.lib;LLVM-C.lib;lldCOFF.lib;lldCommon.lib;findAllSymbols.lib;ntdll.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)xCoffee\pluginsdk;$(SolutionDir)xCoffee\pluginsdk\dbghelp;$(SolutionDir)xCoffee\pluginsdk\DeviceNameResolver;$(SolutionDir)xCoffee\pluginsdk\jansson;$(SolutionDir)xCoffee\pluginsdk\lz4;$(SolutionDir)xCoffee\pluginsdk\TitanEngine;$(SolutionDir)xCoffee\pluginsdk\XEDParse;$(SolutionDir).lib\$(Platform)\$(Configuration)\;D:\LLVM_Src\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+    <PostBuildEvent>
+      <Command>powershell -ExecutionPolicy Bypass -File "$(SolutionDir)\dbg.ps1"</Command>
+    </PostBuildEvent>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

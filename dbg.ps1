@@ -1,0 +1,1 @@
+Copy-Item -Path ".build\x64\Release\xCoffee.dll" -Destination "D:\xdg\release\x64\plugins\xCoffee.dp64" -Force
