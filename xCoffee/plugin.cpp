@@ -318,7 +318,8 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 			return;
 		}
 
-		std::vector<llvm::pdb::BulkPublic> publics{};
+		std::vector<char*> cacheNames{};
+		
 		BridgeList<Script::Symbol::SymbolInfo> symbolList{};
 		if (!Script::Symbol::GetList(&symbolList) && !symbolList.Count())
 		{
@@ -344,18 +345,23 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 			}
 
 			dprintf("Num symbols: %llu", symbols.size());
+			cacheNames.reserve(symbols.size());
 
 			if (symbols.size())
 			{
+				std::vector<llvm::pdb::BulkPublic> publics{};
+
 				for (auto& symbol : symbols)
 				{
 					llvm::pdb::BulkPublic public_sym{};
 					std::fill_n(reinterpret_cast<uint8_t*>(&public_sym), sizeof(llvm::pdb::BulkPublic), 0);
 
 					auto segid = getSectionIndexByRva(symbol.rva);
+					// need reallocate string.... without this CTD
+					auto copyName = strdup(symbol.name);
+					cacheNames.push_back(copyName);
 
-					// need reallocate string.... without this CTD, but maybe leaks
-					public_sym.Name = strdup(symbol.name);
+					public_sym.Name = copyName;
 					public_sym.NameLen = strlen(symbol.name);
 					// maybe need starts with 1
 					public_sym.Segment = segid + 1;
@@ -391,9 +397,8 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 			return;
 		}
 
-		for (auto& pub : publics)
-			// paranoid
-			free(const_cast<char*>(pub.Name));
+		for (auto& nam : cacheNames)
+			free(nam);
 	}
 }
 
