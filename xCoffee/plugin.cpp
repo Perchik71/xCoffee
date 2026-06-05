@@ -43,8 +43,8 @@ namespace xCoffee
 	};
 
 	constexpr static auto START_ADDRESS = 0x140000000ull;
-	constexpr static auto FILENAME = "XDBGImportNames.txt";
-	constexpr static auto FILENAME_PDB = "FakeDBG.pdb";
+	constexpr static auto FILENAME = L"XDBGImportNames.txt";
+	constexpr static auto FILENAME_PDB = L"FakeDBG.pdb";
 
 	static duint DbgGetCurrentModule() noexcept
 	{
@@ -385,10 +385,12 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 			}
 		}
 
-		if (!TDialogUtil::OpenSelectionDialog("Program Databases (*.pdb)\0*.pdb\0\0", "Create fake pdb...",
+		if (!TDialogUtil::OpenSelectionDialog(L"Program Databases (*.pdb)\0*.pdb\0\0", L"Create fake pdb...",
 			[&_pdbBuilder](const wchar_t* a_filename) -> bool {
+				std::filesystem::path filename(a_filename);
+				filename.replace_extension(L".pdb");
 				auto guid = _pdbBuilder.getInfoBuilder().getGuid();
-				if (_pdbBuilder.commit(std::filesystem::path(a_filename).string(), std::addressof(guid)))
+				if (_pdbBuilder.commit(filename.string(), std::addressof(guid)))
 					return false;
 				return true;
 			}, true, FILENAME_PDB))
@@ -481,9 +483,11 @@ void xCoffee::TPlugin::ExportNames()
 	{
 		FILE* f = nullptr;
 
-		if (!TDialogUtil::OpenSelectionDialog("Text files (*.txt)\0*.txt\0\0", "Export names...",
+		if (!TDialogUtil::OpenSelectionDialog(L"Text files (*.txt)\0*.txt\0\0", L"Export names...",
 			[&f](const wchar_t* a_filename) -> bool {
-				f = _wfopen(a_filename, L"w+");
+				std::filesystem::path filename(a_filename);
+				filename.replace_extension(L".txt");
+				f = _wfopen(filename.wstring().c_str(), L"w+");
 				if (!f)
 				{
 					dprintf("File \"%s\" no create (%s)", TConvertUtil::ToEncode(a_filename).c_str(), strerror(errno));

@@ -185,28 +185,27 @@ uintptr_t xCoffee::TProcessUtil::GetProcessBaseAddr(const HANDLE a_process) noex
 	return DbgFunctions()->ModBaseFromName(filename.c_str());
 }
 
-bool xCoffee::TDialogUtil::OpenSelectionDialog(const std::string_view& a_format, const std::string_view& a_title,
-	std::function<bool(const wchar_t*)> a_handler, bool a_save, const std::string_view& a_defaultName) noexcept
+bool xCoffee::TDialogUtil::OpenSelectionDialog(const wchar_t* a_format, const wchar_t* a_title,
+	std::function<bool(const wchar_t*)> a_handler, bool a_save, const wchar_t* a_defaultName) noexcept
 {
 	wchar_t buffer[MAX_PATH]{};
-	if (!a_defaultName.empty())
-		wcscpy_s(buffer, TConvertUtil::ToDecode(a_defaultName).c_str());
+	if (!a_defaultName)
+		return buffer[0] = L'\0';
+	else
+		wcscpy_s(buffer, a_defaultName);
 
 	OPENFILENAMEW ofn{};
 	std::fill_n((uint8_t*)std::addressof(ofn), sizeof(OPENFILENAMEW), 0);
 
-	auto format = TConvertUtil::ToDecode(a_format);
-	auto title = TConvertUtil::ToDecode(a_title);
-
 	ofn.lStructSize = sizeof(OPENFILENAMEW);
 	ofn.hwndOwner = GuiGetWindowHandle();
-	ofn.lpstrFilter = format.c_str();
+	ofn.lpstrFilter = a_format;
 	ofn.lpstrFile = buffer;
 	ofn.nMaxFile = ARRAYSIZE(buffer);
 	ofn.lpstrInitialDir = L".\\";
-	ofn.lpstrTitle = title.c_str();
+	ofn.lpstrTitle = a_title;
 	ofn.Flags = OFN_FILEMUSTEXIST;
-	ofn.lpstrDefExt = wcschr(format.c_str(), '\0') + 3;
+	ofn.lpstrDefExt = wcschr(a_format, '\0') + 3;
 
 	if (a_save)
 	{

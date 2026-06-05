@@ -40,8 +40,8 @@ namespace xCoffee
 
 	struct TDialogUtil
 	{
-		static bool OpenSelectionDialog(const std::string_view& a_format, const std::string_view& a_title,
+		static bool OpenSelectionDialog(const wchar_t* a_format, const wchar_t* a_title,
 			std::function<bool(const wchar_t*)> a_handler, bool a_save = false, 
-			const std::string_view& a_defaultName = "") noexcept;
+			const wchar_t* a_defaultName = L"") noexcept;
 	};
 }
