@@ -27,6 +27,7 @@
 #include <filesystem>
 #include <fstream>
 #include <array>
+#include <unordered_map>
 #if 0
 #include <regex>
 #endif
@@ -328,9 +329,9 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 		}
 		else
 		{
-			std::vector<Script::Symbol::SymbolInfo> symbols{};
+			std::unordered_map<std::string, Script::Symbol::SymbolInfo> symbols{};
 			auto total = symbolList.Count();
-			//dprintf("Debug symbols: %llu", total);
+			dprintf("Debug symbols: %llu", total);
 
 			nameProcess = TFileUtil::GetFileName(nameProcess);
 
@@ -341,7 +342,13 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 					!strnicmp(symbolList[ids].name, "fun_", 4) || stricmp(symbolList[ids].mod, nameProcess.c_str()))
 					continue;
 
-				symbols.push_back(symbolList[ids]);
+				auto tmp = strdup(symbolList[ids].name);
+				if (tmp)
+				{
+					// insert label with unique hash (name+rva)
+					symbols.insert({ std::string(strlwr(tmp)) + std::to_string(symbolList[ids].rva), symbolList[ids]});
+					free(tmp);
+				}
 			}
 
 			dprintf("Num symbols: %llu", symbols.size());
@@ -356,17 +363,17 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 					llvm::pdb::BulkPublic public_sym{};
 					std::fill_n(reinterpret_cast<uint8_t*>(&public_sym), sizeof(llvm::pdb::BulkPublic), 0);
 
-					auto segid = getSectionIndexByRva(symbol.rva);
+					auto segid = getSectionIndexByRva(symbol.second.rva);
 					// need reallocate string.... without this CTD
-					auto copyName = strdup(symbol.name);
+					auto copyName = strdup(symbol.second.name);
 					cacheNames.push_back(copyName);
 
 					public_sym.Name = copyName;
-					public_sym.NameLen = strlen(symbol.name);
+					public_sym.NameLen = strlen(symbol.second.name);
 					// maybe need starts with 1
 					public_sym.Segment = segid + 1;
 					// offset should relative seg off.
-					public_sym.Offset = symbol.rva - segments[segid].rva;
+					public_sym.Offset = symbol.second.rva - segments[segid].rva;
 					// manual added flags
 					public_sym.Flags = std::to_underlying(llvm::codeview::PublicSymFlags::Code) |
 						std::to_underlying(llvm::codeview::PublicSymFlags::Function);
