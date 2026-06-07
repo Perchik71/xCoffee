@@ -203,6 +203,9 @@ namespace xCoffee
 	void TRTTIManager::Dump(const std::string& a_filename) const noexcept
 	{
 		TFileStream stream(a_filename, TTextFileStream::EMode::CREATE);
+		if (!stream.IsOpen())
+			return;
+
 		for (const auto& it : srtti_data)
 		{
 			auto& info = it.second;	

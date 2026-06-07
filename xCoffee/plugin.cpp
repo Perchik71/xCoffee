@@ -19,6 +19,7 @@
 
 #include "plugin.h"
 #include "util.h"
+#include "stream.h"
 #include "ms_rtti.h"
 #include "signmaker.h"
 #include "..\resource.h"
@@ -43,12 +44,15 @@ namespace xCoffee
 		MENU_CREATEFAKEPDB,
 		MENU_RTTI_DUMP,
 		MENU_RTTI_APPLY,
+		MENU_RTTI_EXPORT_NAMES,
+		MENU_RTTI_IMPORT_NAMES,
 		MENU_MAX
 	};
 
 	constexpr static auto START_ADDRESS = 0x140000000ull;
 	constexpr static auto FILENAME = L"XDBGImportNames.txt";
 	constexpr static auto FILENAME_RTTI = L"XDBG_RTTI.txt";
+	constexpr static auto FILENAME_RTTI_CMP = L"XDBG_RTTI.bin";
 	constexpr static auto FILENAME_PDB = L"FakeDBG.pdb";
 
 	static duint DbgGetCurrentModule() noexcept
@@ -110,6 +114,12 @@ void xCoffee::TPlugin::MenuEntry_Handler(CBTYPE cbType, void* callbackInfo) noex
 		break;
 	case MENU_RTTI_APPLY:
 		TPlugin::GetSingleton()->RTTIApply();
+		break;
+	case MENU_RTTI_EXPORT_NAMES:
+		TPlugin::GetSingleton()->RTTIExportName();
+		break;
+	case MENU_RTTI_IMPORT_NAMES:
+		TPlugin::GetSingleton()->RTTIImportName();
 		break;
 	}
 }
@@ -472,6 +482,9 @@ void xCoffee::TPlugin::InitGUI(PLUG_SETUPSTRUCT* a_setupStruct) noexcept
 	{
 		_plugin_menuaddentry(hMenuPlugin_RTTI, MENU_RTTI_DUMP, "Dump");
 		_plugin_menuaddentry(hMenuPlugin_RTTI, MENU_RTTI_APPLY, "Apply");
+		_plugin_menuaddseparator(hMenuPlugin_RTTI);
+		_plugin_menuaddentry(hMenuPlugin_RTTI, MENU_RTTI_EXPORT_NAMES, "Export name function's");
+		_plugin_menuaddentry(hMenuPlugin_RTTI, MENU_RTTI_IMPORT_NAMES, "Import name function's");
 	}
 
 	// disasm
@@ -633,16 +646,13 @@ void xCoffee::TPlugin::CreateFakePDB()
 
 void xCoffee::TPlugin::RTTIDump()
 {
-	TRTTIManager::GetSingleton()->Initialize();
-
+	TRTTIManagerScope scope;
 	if (!TDialogUtil::OpenSelectionDialog(L"Text files (*.txt)\0*.txt\0\0", L"Dump RTTI...",
 		[&](const wchar_t* a_filename) -> bool {
 			TRTTIManager::GetSingleton()->Dump(TConvertUtil::ToEncode(a_filename));
 			return true;
 		}, true, FILENAME_RTTI))
 		return;
-
-	TRTTIManager::GetSingleton()->Shutdown();
 }
 
 void xCoffee::TPlugin::RTTIApply()
@@ -678,4 +688,186 @@ void xCoffee::TPlugin::RTTIApply()
 	rtti.Shutdown();
 
 	dprintf("<RTTI> Added new labels (%llu)", num);
+}
+
+void xCoffee::TPlugin::RTTIExportName()
+{
+	TRTTIManagerScope scope;
+	if (!TDialogUtil::OpenSelectionDialog(L"Binary file (*.bin)\0*.bin\0\0", L"Export RTTI names...",
+		[&](const wchar_t* a_filename) -> bool {
+			std::filesystem::path filename(a_filename);
+			filename.replace_extension(L".bin");
+
+			TFileStream stream(TConvertUtil::ToEncode(filename), TFileStream::EMode::CREATE);
+			if (!stream.IsOpen())
+				return false;
+
+			FileHeaderBin header{};
+			(void)stream.WriteBuffer(&header, sizeof(header));
+
+			auto& rtti = *TRTTIManager::GetSingleton();
+			auto base = rtti.BaseAddress();
+			char szLabelAPIFunction[MAX_COMMENT_SIZE] = "";
+			uint64_t num = 0;
+
+			auto WriteStr = [&stream](const std::string& a_str)
+				{
+					uint16_t len = 0;
+					if (a_str.length() >= std::numeric_limits<uint16_t>::max())
+						len = static_cast<uint16_t>(std::numeric_limits<uint16_t>::max());
+					else
+						len = static_cast<uint16_t>(a_str.length());
+
+					(void)stream.WriteBuffer(&len, sizeof(len));
+					(void)stream.WriteBuffer(a_str.c_str(), len);
+				};
+
+			for (auto& it : rtti)
+			{
+				auto& typeInfo = it.second;
+
+				if (!typeInfo.VFunctionCount)
+					continue;
+
+				auto vtable = std::make_unique<uintptr_t[]>(typeInfo.VFunctionCount);
+				if (!vtable)
+					return false;
+
+				if (!DbgMemRead(typeInfo.VTableAddress, vtable.get(), typeInfo.VFunctionCount * sizeof(uintptr_t)))
+					return false;
+
+				(void)stream.WriteBuffer(&typeInfo.VFunctionCount, sizeof(typeInfo.VFunctionCount));
+				WriteStr(typeInfo.Name);
+				WriteStr(typeInfo.RawName);
+
+				for (uint64_t ids = 0; ids < typeInfo.VFunctionCount; ids++)
+				{
+					auto addr = vtable.get()[ids];
+
+					// get label if any as function name
+					if (!DbgGetLabelAt(addr, SEG_DEFAULT, szLabelAPIFunction))
+						sprintf_s(szLabelAPIFunction, "sub_%llX", addr);
+
+					(void)stream.WriteBuffer(&addr, sizeof(addr));
+					WriteStr(szLabelAPIFunction);
+				}
+
+				num++;
+			}
+
+			header.filesize = stream.Size();
+			header.count = num;
+			stream.SetPosition(0);
+			(void)stream.WriteBuffer(&header, sizeof(header));
+			stream.Flush();
+
+			return true;
+		}, true, FILENAME_RTTI_CMP))
+		return;
+}
+
+void xCoffee::TPlugin::RTTIImportName()
+{
+	TRTTIManagerScope scope;
+	if (!TDialogUtil::OpenSelectionDialog(L"Binary file (*.bin)\0*.bin\0\0", L"Import RTTI names...",
+		[&](const wchar_t* a_filename) -> bool {
+			std::filesystem::path filename(a_filename);
+			filename.replace_extension(L".bin");
+
+			TFileStream stream(TConvertUtil::ToEncode(filename), TFileStream::EMode::OPEN_READ);
+			if (!stream.IsOpen())
+				return false;
+
+			auto& rtti = *TRTTIManager::GetSingleton();
+			auto base = rtti.BaseAddress();
+			FileHeaderBin header{};
+			if (!stream.ReadBuffer(&header, sizeof(header)))
+				return false;
+
+			if ((header.magic != HASH_MAGIC) || (header.version != VERSION) ||
+				(header.filesize != stream.Size()))
+				return false;
+
+			if (!header.count)
+				return true;
+
+			char szLabelAPIFunction[MAX_COMMENT_SIZE] = "";
+			uint64_t num = 0;
+
+			auto ReadStr = [&stream](std::string& a_str)
+				{
+					uint16_t len = 0;
+					(void)stream.ReadBuffer(&len, sizeof(len));
+
+					a_str.resize(static_cast<size_t>(len) + 1);
+					(void)stream.ReadBuffer(a_str.data(), len);
+				};
+
+			for (uint64_t ids_class = 0; ids_class < header.count; ids_class++)
+			{
+				uint64_t funcCount = 0;
+				(void)stream.ReadBuffer(&funcCount, sizeof(funcCount));
+
+				std::string Name, RawName;
+				ReadStr(Name);
+				ReadStr(RawName);
+
+				std::vector<std::string> labels;
+				labels.resize(funcCount);
+				for (uint64_t ids = 0; ids < funcCount; ids++)
+				{
+					uintptr_t addr = 0;
+					(void)stream.ReadBuffer(&addr, sizeof(addr));
+					ReadStr(labels[ids]);
+				}
+
+				auto object = rtti.Find(Name.c_str());
+				if (!object)
+					continue;
+
+				if (object->VFunctionCount != funcCount)
+				{
+					dprintf("<RTTI> `%s` changed vtable (%u/%u)", Name.c_str(), object->VFunctionCount, funcCount);
+					continue;
+				}
+
+				auto vtable = std::make_unique<uintptr_t[]>(funcCount);
+				if (!vtable)
+					return false;
+
+				if (!DbgMemRead(object->VTableAddress, vtable.get(), funcCount * sizeof(uintptr_t)))
+					return false;
+				
+				for (uint64_t ids = 0; ids < funcCount; ids++)
+				{
+					auto addr = vtable.get()[ids];
+
+					// get label if any as function name
+					if (DbgGetLabelAt(addr, SEG_DEFAULT, szLabelAPIFunction))
+						continue;
+
+					if (!strncmp(labels[ids].c_str(), "sub_", 4))
+						continue;
+
+					if (!DbgSetLabelAt(addr, labels[ids].c_str()))
+					{
+						dprintf("<RTTI> Failed set label for address (0X%llX)", addr);
+						continue;
+					}
+
+					//char cmd[50] = "";
+					//// create extra analysis for single function
+					//sprintf_s(cmd, "analr %llX", addr);
+					//DbgCmdExecDirect(cmd); // this cmd will erase the current references
+					//DbgCmdExecDirect("analx"); // get all references again for detecting functions boundaries
+
+					//Bridge
+
+					//GuiUpdateAllViews();
+				}
+			}
+
+			return true;
+		}, false, FILENAME_RTTI_CMP))
+		return;
 }

@@ -24,6 +24,18 @@ namespace xCoffee
 		static void MenuEntry_Handler(CBTYPE cbType, void* callbackInfo) noexcept;
 
 		void UnsafeCreateFakePDB();
+
+		static constexpr auto HASH_MAGIC = 0x59120345ul;
+		static constexpr auto VERSION = 0x1ul;
+
+		struct FileHeaderBin
+		{
+			uint32_t magic{ HASH_MAGIC };
+			uint32_t version{ VERSION };
+			uint64_t count{ 0 };
+			uint64_t filesize{ 0 };
+		};
+
 	public:
 		constexpr static auto PLUGIN_NAME = __PLUGIN_NAME;
 		constexpr static auto PLUGIN_VERSION = 1;
@@ -41,5 +53,7 @@ namespace xCoffee
 		virtual void CreateFakePDB();
 		virtual void RTTIDump();
 		virtual void RTTIApply();
+		virtual void RTTIExportName();
+		virtual void RTTIImportName();
 	};
 }

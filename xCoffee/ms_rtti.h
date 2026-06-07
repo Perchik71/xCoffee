@@ -146,4 +146,17 @@ namespace xCoffee
 		[[nodiscard]] bool IsValidCOL(CompleteObjectLocator* Locator) const noexcept;
 		[[nodiscard]] uint32_t GetCountVFunc(uintptr_t addr) const noexcept;
 	};
+
+	class TRTTIManagerScope
+	{
+		TRTTIManagerScope(TRTTIManagerScope&& a_rhs) = delete;
+		TRTTIManagerScope(const TRTTIManagerScope& a_rhs) = delete;
+		TRTTIManagerScope& operator=(TRTTIManagerScope&& a_rhs) = delete;
+		TRTTIManagerScope& operator=(const TRTTIManagerScope& a_rhs) = delete;
+	public:
+		TRTTIManagerScope() { TRTTIManager::GetSingleton()->Initialize(); }
+		~TRTTIManagerScope() { TRTTIManager::GetSingleton()->Shutdown(); }
+	};
+
+
 }
