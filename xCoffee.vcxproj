@@ -8,6 +8,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />
+    <ClInclude Include="xCoffee\stream.h" />
+    <ClInclude Include="xCoffee\ms_rtti.h" />
     <ClInclude Include="xCoffee\util.h" />
     <ClInclude Include="xCoffee\signmaker.h" />
     <ClInclude Include="xCoffee\singleton.h" />
@@ -48,6 +50,8 @@
     <ClInclude Include="xCoffee\pluginsdk\_scriptapi_symbol.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="xCoffee\stream.cpp" />
+    <ClCompile Include="xCoffee\ms_rtti.cpp" />
     <ClCompile Include="xCoffee\util.cpp" />
     <ClCompile Include="xCoffee\signmaker.cpp" />
     <ClCompile Include="xCoffee\plugin.cpp" />
@@ -103,7 +107,7 @@
       <CallingConvention>StdCall</CallingConvention>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <DisableSpecificWarnings>4996;4273;4013;4244;4267;26450;26495</DisableSpecificWarnings>
+      <DisableSpecificWarnings>4996;4273;4013;4244;4267;26450;26495;26110</DisableSpecificWarnings>
       <AdditionalIncludeDirectories>$(SolutionDir).depends\zydis\include;$(SolutionDir).depends\zydis\msvc;$(SolutionDir).depends\zydis\src;$(SolutionDir).depends\zydis\dependencies\zycore\include;D:\LLVM_Src\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

@@ -132,6 +132,12 @@
     <ClInclude Include="xCoffee\util.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
+    <ClInclude Include="xCoffee\ms_rtti.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="xCoffee\stream.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="xCoffee\pluginmain.cpp">
@@ -147,6 +153,12 @@
       <Filter>Исходные файлы</Filter>
     </ClCompile>
     <ClCompile Include="xCoffee\util.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="xCoffee\ms_rtti.cpp">
+      <Filter>Исходные файлы</Filter>
+    </ClCompile>
+    <ClCompile Include="xCoffee\stream.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
   </ItemGroup>

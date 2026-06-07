@@ -171,18 +171,53 @@ std::string xCoffee::TFileUtil::GetFilePath(const std::string& a_filename) noexc
 	return "";
 }
 
-std::string xCoffee::TProcessUtil::GetProcessFileName(const HANDLE a_process) noexcept
+std::string xCoffee::TProcessUtil::GetProcessFileName(const uintptr_t a_process) noexcept
 {
 	std::wstring nameProcess;
 	nameProcess.resize(1024);
-	nameProcess.resize(GetModuleFileNameExW(a_process, nullptr, nameProcess.data(), (DWORD)nameProcess.length()));
+	nameProcess.resize(GetModuleFileNameExW(reinterpret_cast<HANDLE>(a_process), nullptr, 
+		nameProcess.data(), (DWORD)nameProcess.length()));
 	return TConvertUtil::ToEncode(nameProcess);
 }
 
-uintptr_t xCoffee::TProcessUtil::GetProcessBaseAddr(const HANDLE a_process) noexcept
+uintptr_t xCoffee::TProcessUtil::GetProcessBaseAddr(const uintptr_t a_process) noexcept
 {
 	auto filename = TFileUtil::GetFileName(GetProcessFileName(a_process));
 	return DbgFunctions()->ModBaseFromName(filename.c_str());
+}
+
+bool xCoffee::TProcessUtil::GetProcessSegmentList(const uintptr_t a_process, SegmentList& a_list) noexcept
+{
+	a_list.list.clear();
+
+	auto modBase = TProcessUtil::GetProcessBaseAddr(a_process);
+	if (!modBase) return false;
+
+	BridgeList<Script::Module::ModuleSectionInfo> sectionList;
+	if (!Script::Module::SectionListFromAddr(modBase, &sectionList))
+		return false;
+	else
+	{
+		for (size_t i = 0; i < sectionList.Count(); i++)
+		{
+			auto& sec = sectionList[i];
+			a_list.list.push_back({ sec.addr, sec.size, sec.name });
+		}
+	}
+
+	return a_list.list.size() != 0;
+}
+
+bool xCoffee::TProcessUtil::SegmentList::GetByName(const std::string_view& a_name, SegmentInfo& a_info) const noexcept
+{
+	for (auto& item : list)
+		if (!stricmp(item.name.c_str(), a_name.data()))
+		{
+			a_info = item;
+			return true;
+		}
+
+	return false;
 }
 
 bool xCoffee::TDialogUtil::OpenSelectionDialog(const wchar_t* a_format, const wchar_t* a_title,

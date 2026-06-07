@@ -19,6 +19,7 @@ namespace xCoffee
 		int hMenuSymmod{ -1 };
 
 		int hMenuPlugin_ImportExportNames{ -1 };
+		int hMenuPlugin_RTTI{ -1 };
 
 		static void MenuEntry_Handler(CBTYPE cbType, void* callbackInfo) noexcept;
 
@@ -38,5 +39,7 @@ namespace xCoffee
 		virtual void ExportNames();
 		virtual void CreateSignature();
 		virtual void CreateFakePDB();
+		virtual void RTTIDump();
+		virtual void RTTIApply();
 	};
 }

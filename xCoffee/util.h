@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 #include <functional>
 
 namespace xCoffee
@@ -34,8 +35,34 @@ namespace xCoffee
 
 	struct TProcessUtil
 	{
-		static std::string GetProcessFileName(const HANDLE a_process) noexcept;
-		static uintptr_t GetProcessBaseAddr(const HANDLE a_process) noexcept;
+		static std::string GetProcessFileName(const uintptr_t a_process) noexcept;
+		static uintptr_t GetProcessBaseAddr(const uintptr_t a_process) noexcept;
+		
+		struct RegionInfo
+		{
+			uintptr_t addr{ 0 };
+			uintptr_t size{ 0 };
+
+			[[nodiscard]] inline uintptr_t GetAddressBegin() const noexcept { return addr; }
+			[[nodiscard]] inline uintptr_t GetAddressEnd() const noexcept { return addr + size; }
+			[[nodiscard]] inline uintptr_t GetOffsetBegin(uintptr_t a_base) const noexcept { return GetAddressBegin() - a_base; }
+			[[nodiscard]] inline uintptr_t GetOffsetEnd(uintptr_t a_base) const noexcept { return GetAddressEnd() - a_base; }
+		};
+
+		struct SegmentInfo :
+			public RegionInfo
+		{
+			std::string name{ 0 };
+		};
+
+		struct SegmentList
+		{
+			std::vector<SegmentInfo> list;
+
+			[[nodiscard]] bool GetByName(const std::string_view& a_name, SegmentInfo& a_info) const noexcept;
+		};
+		
+		[[nodiscard]] static bool GetProcessSegmentList(const uintptr_t a_process, SegmentList& a_list) noexcept;
 	};
 
 	struct TDialogUtil

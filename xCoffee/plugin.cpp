@@ -19,6 +19,7 @@
 
 #include "plugin.h"
 #include "util.h"
+#include "ms_rtti.h"
 #include "signmaker.h"
 #include "..\resource.h"
 
@@ -40,11 +41,14 @@ namespace xCoffee
 		MENU_EXPORT,
 		MENU_CREATESIG,
 		MENU_CREATEFAKEPDB,
+		MENU_RTTI_DUMP,
+		MENU_RTTI_APPLY,
 		MENU_MAX
 	};
 
 	constexpr static auto START_ADDRESS = 0x140000000ull;
 	constexpr static auto FILENAME = L"XDBGImportNames.txt";
+	constexpr static auto FILENAME_RTTI = L"XDBG_RTTI.txt";
 	constexpr static auto FILENAME_PDB = L"FakeDBG.pdb";
 
 	static duint DbgGetCurrentModule() noexcept
@@ -101,6 +105,12 @@ void xCoffee::TPlugin::MenuEntry_Handler(CBTYPE cbType, void* callbackInfo) noex
 	case MENU_CREATEFAKEPDB:
 		TPlugin::GetSingleton()->CreateFakePDB();
 		break;
+	case MENU_RTTI_DUMP:
+		TPlugin::GetSingleton()->RTTIDump();
+		break;
+	case MENU_RTTI_APPLY:
+		TPlugin::GetSingleton()->RTTIApply();
+		break;
 	}
 }
 
@@ -112,7 +122,7 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 		return;
 	}
 
-	auto process = DbgGetProcessHandle();
+	auto process = reinterpret_cast<uintptr_t>(DbgGetProcessHandle());
 	auto nameProcess = TProcessUtil::GetProcessFileName(process);
 	if (nameProcess.empty())
 	{
@@ -454,7 +464,16 @@ void xCoffee::TPlugin::InitGUI(PLUG_SETUPSTRUCT* a_setupStruct) noexcept
 	_plugin_menuaddseparator(hMenu);
 	_plugin_menuaddentry(hMenu, MENU_CREATESIG, "Create signature");
 	_plugin_menuaddentry(hMenu, MENU_CREATEFAKEPDB, "Create fake PDB");
+	_plugin_menuaddseparator(hMenu);
 	
+	hMenuPlugin_RTTI = _plugin_menuadd(hMenu, "RTTI");
+	if (hMenuPlugin_RTTI == -1)
+		dputs("Failed create menu");
+	{
+		_plugin_menuaddentry(hMenuPlugin_RTTI, MENU_RTTI_DUMP, "Dump");
+		_plugin_menuaddentry(hMenuPlugin_RTTI, MENU_RTTI_APPLY, "Apply");
+	}
+
 	// disasm
 	_plugin_menuaddentry(hMenuDisasm, MENU_CREATESIG, "Create signature");
 
@@ -466,8 +485,9 @@ void xCoffee::TPlugin::Shutdown() noexcept
 {
 	_plugin_unregistercallback(handle, CB_MENUENTRY);
 
-	_plugin_menuclear(hMenu);
 	_plugin_menuclear(hMenuPlugin_ImportExportNames);
+	_plugin_menuclear(hMenuPlugin_RTTI);
+	_plugin_menuclear(hMenu);
 }
 
 void xCoffee::TPlugin::ImportNames()
@@ -484,7 +504,7 @@ void xCoffee::TPlugin::ExportNames()
 	}
 
 	std::string nameProcess, version;
-	auto process = DbgGetProcessHandle();
+	auto process = reinterpret_cast<uintptr_t>(DbgGetProcessHandle());
 	nameProcess = TProcessUtil::GetProcessFileName(process);
 	if (nameProcess.length())
 	{
@@ -609,4 +629,53 @@ void xCoffee::TPlugin::CreateFakePDB()
 	{
 		dputs("FATAL!!!");
 	}
+}
+
+void xCoffee::TPlugin::RTTIDump()
+{
+	TRTTIManager::GetSingleton()->Initialize();
+
+	if (!TDialogUtil::OpenSelectionDialog(L"Text files (*.txt)\0*.txt\0\0", L"Dump RTTI...",
+		[&](const wchar_t* a_filename) -> bool {
+			TRTTIManager::GetSingleton()->Dump(TConvertUtil::ToEncode(a_filename));
+			return true;
+		}, true, FILENAME_RTTI))
+		return;
+
+	TRTTIManager::GetSingleton()->Shutdown();
+}
+
+void xCoffee::TPlugin::RTTIApply()
+{
+	auto& rtti = *TRTTIManager::GetSingleton();
+	rtti.Initialize();
+	auto base = rtti.BaseAddress();
+	char szLabelAPIFunction[MAX_COMMENT_SIZE] = "";
+
+	uint64_t num = 0;
+
+	for (auto& it : rtti)
+	{
+		auto& typeInfo = it.second;
+
+		// get label if any as function name
+		if (!DbgGetLabelAt(base + typeInfo.RvaDescriptor, SEG_DEFAULT, szLabelAPIFunction))
+		{
+			std::string temp = typeInfo.Name;
+			auto itStr = temp.find_first_of(' ');
+			if (itStr != std::string::npos)
+				temp.erase(0, itStr + 1);
+
+			temp.insert(0, "RTTI_");
+
+			if (!DbgSetLabelAt(base + typeInfo.RvaDescriptor, temp.c_str()))
+				dprintf("<RTTI> Failed set label for address (0X%llX)", base + typeInfo.RvaDescriptor);
+			else
+				num++;
+		}
+	}
+
+	rtti.Shutdown();
+
+	dprintf("<RTTI> Added new labels (%llu)", num);
 }
