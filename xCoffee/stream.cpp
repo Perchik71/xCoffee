@@ -689,7 +689,7 @@ namespace xCoffee
 
     bool TTextFileStream::ReadLine(char* string, std::uint32_t maxsize) const noexcept(true)
     {
-        if (!IsOpen() || !maxsize)
+        if (!IsOpen() || !maxsize || feof(reinterpret_cast<FILE*>(handle)))
             return false;
 
         fgets(string, (int)maxsize, reinterpret_cast<FILE*>(handle));
@@ -861,5 +861,10 @@ namespace xCoffee
     TTextFileStream::TTextFileStream(const std::string_view& a_filename, EMode a_mode) noexcept
     {
         (void)Open(a_filename, a_mode);
+    }
+
+    TTextFileStream::~TTextFileStream()
+    {
+        Close();
     }
 }

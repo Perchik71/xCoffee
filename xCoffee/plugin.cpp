@@ -46,6 +46,7 @@ namespace xCoffee
 		MENU_RTTI_APPLY,
 		MENU_RTTI_EXPORT_NAMES,
 		MENU_RTTI_IMPORT_NAMES,
+		MENU_TEST,
 		MENU_MAX
 	};
 
@@ -121,6 +122,9 @@ void xCoffee::TPlugin::MenuEntry_Handler(CBTYPE cbType, void* callbackInfo) noex
 	case MENU_RTTI_IMPORT_NAMES:
 		TPlugin::GetSingleton()->RTTIImportName();
 		break;
+	case MENU_TEST:
+		TPlugin::GetSingleton()->TEST();
+		break;
 	}
 }
 
@@ -151,7 +155,7 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 	}
 
 	// Create streams in MSF for predefined streams, namely PDB, TPI, DBI and IPI.
-	for (int I = 0; I < (int)llvm::pdb::kSpecialStreamCount; ++I)
+	for (int I = 0; I < (int)std::to_underlying(llvm::pdb::kSpecialStreamCount); ++I)
 		if (_pdbBuilder.getMsfBuilder().addStream(0).takeError())
 		{
 			dputs("Failed create special msf streams pdb");
@@ -412,6 +416,15 @@ void xCoffee::TPlugin::UnsafeCreateFakePDB()
 			}
 		}
 
+
+
+		//BridgeList<Script::::SymbolInfo> symbolList{};
+
+		//llvm::codeview::PublicSymFlags::
+
+		//_pdbBuilder.getTpiBuilder().addTypeRecord()
+
+
 		if (!TDialogUtil::OpenSelectionDialog(L"Program Databases (*.pdb)\0*.pdb\0\0", L"Create fake pdb...",
 			[&_pdbBuilder](const wchar_t* a_filename) -> bool {
 				std::filesystem::path filename(a_filename);
@@ -474,6 +487,7 @@ void xCoffee::TPlugin::InitGUI(PLUG_SETUPSTRUCT* a_setupStruct) noexcept
 	_plugin_menuaddseparator(hMenu);
 	_plugin_menuaddentry(hMenu, MENU_CREATESIG, "Create signature");
 	_plugin_menuaddentry(hMenu, MENU_CREATEFAKEPDB, "Create fake PDB");
+	_plugin_menuaddentry(hMenu, MENU_TEST, "TEST");
 	_plugin_menuaddseparator(hMenu);
 	
 	hMenuPlugin_RTTI = _plugin_menuadd(hMenu, "RTTI");
@@ -496,11 +510,16 @@ void xCoffee::TPlugin::InitGUI(PLUG_SETUPSTRUCT* a_setupStruct) noexcept
 
 void xCoffee::TPlugin::Shutdown() noexcept
 {
-	_plugin_unregistercallback(handle, CB_MENUENTRY);
+	__try
+	{
+		_plugin_unregistercallback(handle, CB_MENUENTRY);
 
-	_plugin_menuclear(hMenuPlugin_ImportExportNames);
-	_plugin_menuclear(hMenuPlugin_RTTI);
-	_plugin_menuclear(hMenu);
+		_plugin_menuclear(hMenuPlugin_ImportExportNames);
+		_plugin_menuclear(hMenuPlugin_RTTI);
+		_plugin_menuclear(hMenu);
+	}
+	__except (1)
+	{}
 }
 
 void xCoffee::TPlugin::ImportNames()
@@ -707,7 +726,7 @@ void xCoffee::TPlugin::RTTIExportName()
 
 			auto& rtti = *TRTTIManager::GetSingleton();
 			auto base = rtti.BaseAddress();
-			char szLabelAPIFunction[MAX_COMMENT_SIZE] = "";
+			char szLabelAPIFunction[MAX_LABEL_SIZE] = "";
 			uint64_t num = 0;
 
 			auto WriteStr = [&stream](const std::string& a_str)
@@ -791,7 +810,7 @@ void xCoffee::TPlugin::RTTIImportName()
 			if (!header.count)
 				return true;
 
-			char szLabelAPIFunction[MAX_COMMENT_SIZE] = "";
+			char szLabelAPIFunction[MAX_LABEL_SIZE] = "";
 			uint64_t num = 0;
 
 			auto ReadStr = [&stream](std::string& a_str)
@@ -823,7 +842,10 @@ void xCoffee::TPlugin::RTTIImportName()
 
 				auto object = rtti.Find(Name.c_str());
 				if (!object)
+				{
+				//	dprintf("<RTTI> `%s` no found", Name.c_str());
 					continue;
+				}
 
 				if (object->VFunctionCount != funcCount)
 				{
@@ -851,7 +873,7 @@ void xCoffee::TPlugin::RTTIImportName()
 
 					if (!DbgSetLabelAt(addr, labels[ids].c_str()))
 					{
-						dprintf("<RTTI> Failed set label for address (0X%llX)", addr);
+						dprintf("<RTTI> Failed set label `%s` for address (0X%llX)", labels[ids].c_str(), addr);
 						continue;
 					}
 
@@ -870,4 +892,163 @@ void xCoffee::TPlugin::RTTIImportName()
 			return true;
 		}, false, FILENAME_RTTI_CMP))
 		return;
+}
+
+static void tghfh()
+{
+	if (!DbgIsDebugging())
+	{
+		dputs("The debugger is not running!");
+		return;
+	}
+
+	if (!xCoffee::TDialogUtil::OpenSelectionDialog(L"Comma-Separated Values (*.csv)\0*.csv\0\0", L"Open CSV...",
+		[](const wchar_t* a_filename) {
+			std::filesystem::path filename(a_filename);
+			filename.replace_extension(L".csv");
+
+			xCoffee::TTextFileStream textStm;
+			if (!textStm.Open(xCoffee::TConvertUtil::ToEncode(filename), xCoffee::TTextFileStream::EMode::OPEN_READ))
+			{
+				dputs(textStm.GetErrorAsString().data());
+				return false;
+			}
+
+			auto szBuf = std::make_unique<char[]>(4096);
+			(void)textStm.ReadLine(szBuf.get(), 4096); // read caps
+
+			static const char* whitespaceDelimitersW = " \t\n\r\f\v";
+
+			auto Trim = [](const std::string& str) noexcept(true)
+				{
+					std::string s = str;
+
+					s.erase(s.find_last_not_of(whitespaceDelimitersW) + 1);
+					s.erase(0, s.find_first_not_of(whitespaceDelimitersW));
+
+					return s;
+				};
+
+			while (textStm.ReadLine(szBuf.get(), 4096))
+			{
+				if (strlen(szBuf.get()) < 8)
+					break;
+
+				std::string nameFunc = Trim(strtok(szBuf.get(), ";"));
+				strtok(nullptr, ";");	// address og
+				strtok(nullptr, ";");	// ID og
+				strtok(nullptr, ";");	// address AE
+				//std::string Id = Trim(strtok(nullptr, ";"));	// ID AE
+				
+				dprintf("%s", nameFunc.c_str());
+			}
+
+			return true;
+		}, false, L"test.csv"))
+	{
+		dputs("Abort! or Failed!");
+		return;
+	}
+}
+
+
+void xCoffee::TPlugin::TEST()
+{
+	__try
+	{
+		tghfh();
+	}
+	__except (1)
+	{
+		dputs("FATAL!!!");
+	}
+
+
+	//auto process = reinterpret_cast<uintptr_t>(DbgGetProcessHandle());
+	//auto nameProcess = TProcessUtil::GetProcessFileName(process);
+	//if (nameProcess.empty())
+	//{
+	//	dputs("Failed get filename process!");
+	//	return;
+	//}
+
+	//auto modBase = TProcessUtil::GetProcessBaseAddr(process);
+
+	//// Add COFF section header stream.
+	//auto temp = std::make_unique<uint8_t[]>(0x1000);
+	//if (!temp)
+	//{
+	//	dputs("Out of memory!");
+	//	return;
+	//}
+
+	//if (!DbgMemRead(modBase, temp.get(), 0x1000))
+	//{
+	//	dputs("Failed read data 0x1000!");
+	//	return;
+	//}
+
+	//auto dosHeader = (PIMAGE_DOS_HEADER)(temp.get());
+	//auto pntHeader = (PIMAGE_NT_HEADERS)(temp.get() + dosHeader->e_lfanew);
+	//auto exceptionDirectoryEntry = pntHeader->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXCEPTION];
+	//if (!exceptionDirectoryEntry.VirtualAddress || !exceptionDirectoryEntry.Size)
+	//{
+	//	dputs("Exception directory is empty!");
+	//	return;
+	//}
+
+	//temp = std::make_unique<uint8_t[]>(static_cast<size_t>(exceptionDirectoryEntry.Size));
+	//if (!temp)
+	//{
+	//	dputs("Out of memory!");
+	//	return;
+	//}
+
+	//if (!DbgMemRead(modBase + exceptionDirectoryEntry.VirtualAddress, temp.get(), exceptionDirectoryEntry.Size))
+	//{
+	//	dputs("Failed read data 0x1000!");
+	//	return;
+	//}
+
+	//PRUNTIME_FUNCTION functionBegin = reinterpret_cast<PRUNTIME_FUNCTION>(temp.get());
+	//PRUNTIME_FUNCTION functionEnd = reinterpret_cast<PRUNTIME_FUNCTION>(temp.get() + exceptionDirectoryEntry.Size);
+	//PRUNTIME_FUNCTION functionCurrent = functionBegin;
+
+	//dprintf("Exception folder contain %u function's", exceptionDirectoryEntry.Size / sizeof(RUNTIME_FUNCTION));
+
+	//char szLabelAPIFunction[MAX_LABEL_SIZE + 1]{0};
+	//TTextFileStream stream("d:\\test.txt", TTextFileStream::EMode::CREATE);
+	//
+	//do
+	//{
+	//	// get label if any as function name
+	//	if (!DbgGetLabelAt(modBase + functionCurrent->BeginAddress, SEG_DEFAULT, szLabelAPIFunction))
+	//	{
+	//		stream.WriteLine("%X %X 0 `sub_%llX`", functionCurrent->BeginAddress, functionCurrent->EndAddress - 1,
+	//			modBase + functionCurrent->BeginAddress);
+	//	}
+	//	else
+	//	{
+	//		stream.WriteLine("%X %X 1 `%s`", functionCurrent->BeginAddress, functionCurrent->EndAddress - 1,
+	//			szLabelAPIFunction);
+	//	}
+	//	
+
+
+	//	/*duint beg, end;
+	//	if (!DbgFunctionGet(modBase + functionCurrent->BeginAddress, &beg, &end))
+	//		DbgFunctionAdd(modBase + functionCurrent->BeginAddress, modBase + functionCurrent->EndAddress - 1);
+	//	else
+	//	{
+	//		if (end != modBase + functionCurrent->EndAddress)
+	//		{
+	//			DbgFunctionDel(modBase + functionCurrent->BeginAddress);
+	//			DbgFunctionAdd(modBase + functionCurrent->BeginAddress, modBase + functionCurrent->EndAddress - 1);
+	//		}
+	//	}*/
+
+	//	// TODO
+
+	//	functionCurrent++;
+	//} while (functionCurrent != functionEnd);
 }

@@ -55,5 +55,6 @@ namespace xCoffee
 		virtual void RTTIApply();
 		virtual void RTTIExportName();
 		virtual void RTTIImportName();
+		virtual void TEST();
 	};
 }

@@ -225,5 +225,6 @@ namespace xCoffee
 		TTextFileStream(const char* a_filename, EMode a_mode) noexcept;
 		TTextFileStream(const std::string& a_filename, EMode a_mode) noexcept;
 		TTextFileStream(const std::string_view& a_filename, EMode a_mode) noexcept;
+		virtual ~TTextFileStream();
 	};
 };
